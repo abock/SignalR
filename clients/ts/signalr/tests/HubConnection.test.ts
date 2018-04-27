@@ -11,7 +11,7 @@ import { NullLogger } from "../src/Loggers";
 import { IStreamSubscriber } from "../src/Stream";
 import { TextMessageFormat } from "../src/TextMessageFormat";
 
-import { asyncit as it, captureException, delay, PromiseSource } from "./Utils";
+import { delay, PromiseSource } from "./Utils";
 
 function createHubConnection(connection: IConnection, logger?: ILogger, protocol?: IHubProtocol) {
     return HubConnection.create(connection, logger || NullLogger.instance, protocol || new JsonHubProtocol());
@@ -170,8 +170,7 @@ describe("HubConnection", () => {
 
             connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, error: "foo" });
 
-            const ex = await captureException(async () => invokePromise);
-            expect(ex.message).toBe("foo");
+            await expect(invokePromise).rejects.toThrow("foo");
         });
 
         it("resolves the promise when a result is received", async () => {
@@ -196,8 +195,7 @@ describe("HubConnection", () => {
             const invokePromise = hubConnection.invoke("testMethod");
             hubConnection.stop();
 
-            const ex = await captureException(async () => await invokePromise);
-            expect(ex.message).toBe("Invocation canceled due to connection being closed.");
+            expect(invokePromise).rejects.toThrow("Invocation canceled due to connection being closed.");
         });
 
         it("completes pending invocations when connection is lost", async () => {
@@ -211,8 +209,7 @@ describe("HubConnection", () => {
             // Typically this would be called by the transport
             connection.onclose(new Error("Connection lost"));
 
-            const ex = await captureException(async () => await invokePromise);
-            expect(ex.message).toBe("Connection lost");
+            expect(invokePromise).rejects.toThrow("Connection lost");
         });
     });
 
@@ -574,8 +571,7 @@ describe("HubConnection", () => {
 
             connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, error: "foo" });
 
-            const ex = await captureException(async () => await observer.completed);
-            expect(ex.message).toEqual("Error: foo");
+            expect(observer.completed).rejects.toThrow("Error: foo");
         });
 
         it("completes the observer when a completion is received", async () => {
@@ -602,8 +598,7 @@ describe("HubConnection", () => {
                 .subscribe(observer);
             hubConnection.stop();
 
-            const ex = await captureException(async () => await observer.completed);
-            expect(ex.message).toEqual("Error: Invocation canceled due to connection being closed.");
+            expect(observer.completed).rejects.toThrow("Error: Invocation canceled due to connection being closed.");
         });
 
         it("completes pending streams when connection is lost", async () => {
@@ -617,8 +612,7 @@ describe("HubConnection", () => {
             // Typically this would be called by the transport
             connection.onclose(new Error("Connection lost"));
 
-            const ex = await captureException(async () => await observer.completed);
-            expect(ex.message).toEqual("Error: Connection lost");
+            expect(observer.completed).rejects.toThrow("Error: Connection lost");
         });
 
         it("yields items as they arrive", async () => {

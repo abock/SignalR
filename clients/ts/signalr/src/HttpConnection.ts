@@ -11,20 +11,20 @@ import { ServerSentEventsTransport } from "./ServerSentEventsTransport";
 import { Arg, createLogger } from "./Utils";
 import { WebSocketTransport } from "./WebSocketTransport";
 
-const enum ConnectionState {
+export const enum ConnectionState {
     Connecting,
     Connected,
     Disconnected,
 }
 
-interface INegotiateResponse {
-    connectionId: string;
-    availableTransports: IAvailableTransport[];
-    url: string;
-    accessToken: string;
+export interface INegotiateResponse {
+    connectionId?: string;
+    availableTransports?: IAvailableTransport[];
+    url?: string;
+    accessToken?: string;
 }
 
-interface IAvailableTransport {
+export interface IAvailableTransport {
     transport: keyof typeof HttpTransportType;
     transferFormats: Array<keyof typeof TransferFormat>;
 }

@@ -6,6 +6,7 @@
         "outDir": "./obj/js",
         "sourceMap": true,
         "moduleResolution": "node",
+        "importHelpers": true,
         "inlineSources": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
