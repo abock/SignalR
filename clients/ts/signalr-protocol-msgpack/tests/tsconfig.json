@@ -4,15 +4,10 @@
         "module": "commonjs",
         "target": "es5",
         "moduleResolution": "node",
-        "outDir": "./obj",
         "lib": [ "es2015", "dom" ],
         "baseUrl": ".",
         "paths": {
             "@aspnet/*": [ "../../*" ]
         }
-    },
-    "include": [
-        "./**/*",
-        "../../typings/**/*"
-    ]
+    }
 }
