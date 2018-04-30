@@ -2,9 +2,10 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 export enum HttpTransportType {
-    WebSockets,
-    ServerSentEvents,
-    LongPolling,
+    None = 0,
+    WebSockets = 1,
+    ServerSentEvents = 2,
+    LongPolling = 3,
 }
 
 export enum TransferFormat {

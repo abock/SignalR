@@ -189,11 +189,12 @@ describe("HttpConnection", () => {
                 httpClient: new TestHttpClient()
                     .on("POST", (r) => {
                         negotiateUrl.resolve(r.url);
-                        return "{}";
+                        return defaultNegotiateResponse;
                     })
                     .on("GET", (r) => {
-                        return "";
-                    }),
+                        return new HttpResponse(204);
+                    })
+                    .on("DELETE", (r) => new HttpResponse(202)),
             } as IHttpConnectionOptions;
 
             const connection = new HttpConnection(givenUrl, options);
@@ -209,16 +210,19 @@ describe("HttpConnection", () => {
     });
 
     eachTransport((requestedTransport: HttpTransportType) => {
-        // OPTIONS is not sent when WebSockets transport is explicitly requested
-        if (requestedTransport === HttpTransportType.WebSockets) {
-            return;
-        }
         it(`cannot be started if requested ${HttpTransportType[requestedTransport]} transport not available on server`, async () => {
+            // Clone the default response
+            const negotiateResponse = { ...defaultNegotiateResponse };
+
+            // Remove the requested transport from the response
+            negotiateResponse.availableTransports = negotiateResponse.availableTransports
+                .filter((f) => f.transport !== HttpTransportType[requestedTransport]);
+
             const options: IHttpConnectionOptions = {
                 ...commonOptions,
                 httpClient: new TestHttpClient()
-                    .on("POST", (r) => defaultNegotiateResponse)
-                    .on("GET", (r) => ""),
+                    .on("POST", (r) => negotiateResponse)
+                    .on("GET", (r) => new HttpResponse(204)),
                 transport: requestedTransport,
             } as IHttpConnectionOptions;
 
