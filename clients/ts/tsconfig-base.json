@@ -2,8 +2,7 @@
     "compileOnSave": false,
     "compilerOptions": {
         "module": "es2015",
-        "target": "es2016",
-        "outDir": "./obj/js",
+        "target": "es5",
         "sourceMap": true,
         "moduleResolution": "node",
         "importHelpers": true,
@@ -15,6 +14,12 @@
         "suppressImplicitAnyIndexErrors": true,
         "noEmitOnError": true,
         "stripInternal": true,
-        "lib": [ "es5", "es2015.promise", "es2015.iterable", "dom" ]
+        "lib": [ "es5", "es2015.promise", "es2015.iterable", "dom" ],
+        "baseUrl": ".",
+        "paths": {
+            "@aspnet/*": [
+                "./*/src/index.ts"
+            ]
+        }
     }
 }

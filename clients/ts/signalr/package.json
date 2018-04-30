@@ -18,7 +18,7 @@
     "build:cjs": "node ../node_modules/typescript/bin/tsc --project ./tsconfig.json --module commonjs --outDir ./dist/cjs --target ES5",
     "build:browser": "node ../node_modules/rollup/bin/rollup -c",
     "build:uglify": "node ../node_modules/uglify-js/bin/uglifyjs --source-map \"url='signalr.min.js.map',content='./dist/browser/signalr.js.map'\" --comments -o ./dist/browser/signalr.min.js ./dist/browser/signalr.js",
-    "test": "node ../node_modules/jest/bin/jest.js"
+    "test": "echo \"Run 'npm test' in the 'clients\\ts' folder to test this package\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -36,20 +36,5 @@
   ],
   "devDependencies": {
     "es6-promise": "^4.2.2"
-  },
-  "jest": {
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testEnvironment": "node",
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ]
   }
 }

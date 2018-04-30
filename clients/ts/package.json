@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "cd ./signalr && npm run build && cd ../signalr-protocol-msgpack && npm run build",
-    "test": "cd ./signalr && npm run test && cd ../signalr-protocol-msgpack && npm run test"
+    "test": "jest"
   },
   "author": "Microsoft",
   "license": "Apache-2.0",
@@ -22,5 +22,28 @@
     "tslint": "^5.9.1",
     "typescript": "^2.7.1",
     "uglify-js": "^3.3.5"
+  },
+  "jest": {
+    "globals": {
+      "ts-jest": {
+        "tsConfigFile": "./tsconfig.jest.json"
+      }
+    },
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testEnvironment": "node",
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleNameMapper": {
+      "^@aspnet/signalr$": "<rootDir>/signalr/src/index.ts"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
   }
 }

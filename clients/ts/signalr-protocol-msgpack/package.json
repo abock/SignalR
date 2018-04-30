@@ -18,7 +18,7 @@
     "build:cjs": "node ../node_modules/typescript/bin/tsc --project ./tsconfig.json --module commonjs --outDir ./dist/cjs --target ES5",
     "build:browser": "node ../node_modules/rollup/bin/rollup -c",
     "build:uglify": "node ../node_modules/uglify-js/bin/uglifyjs --source-map \"url='signalr-protocol-msgpack.min.js.map',content='./dist/browser/signalr-protocol-msgpack.js.map'\" --comments -o ./dist/browser/signalr-protocol-msgpack.min.js ./dist/browser/signalr-protocol-msgpack.js",
-    "test": "node ../node_modules/jest/bin/jest.js"
+    "test": "echo \"Run 'npm test' in the 'clients\\ts' folder to test this package\" && exit 1"
   },
   "keywords": [
     "signalr",
@@ -47,23 +47,5 @@
   "devDependencies": {
     "@types/msgpack5": "^3.4.1",
     "buffer": "^5.0.8"
-  },
-  "jest": {
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testEnvironment": "node",
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleNameMapper": {
-      "^@aspnet/signalr$": "<rootDir>/../signalr/src/index.ts"
-    },
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ]
   }
 }

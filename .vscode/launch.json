@@ -9,8 +9,8 @@
             "args": [
                 "--runInBand"
             ],
-            "cwd": "${workspaceFolder}/clients/ts/signalr",
-            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/clients/ts",
+            "console": "internalConsole",
             "internalConsoleOptions": "neverOpen"
         }
     ]

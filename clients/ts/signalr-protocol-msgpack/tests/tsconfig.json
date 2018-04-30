@@ -1,13 +1,6 @@
 {
-    "compileOnSave": false,
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
-        "moduleResolution": "node",
-        "lib": [ "es2015", "dom" ],
-        "baseUrl": ".",
-        "paths": {
-            "@aspnet/*": [ "../../*" ]
-        }
-    }
+    "extends": "../../tsconfig-base.json",
+    "include": [
+        "./**/*"
+    ]
 }
