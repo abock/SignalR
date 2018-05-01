@@ -23,13 +23,16 @@ describe("HubConnection", () => {
         it("sends negotiation message", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            await hubConnection.start();
-            expect(connection.sentData.length).toBe(1);
-            expect(JSON.parse(connection.sentData[0])).toEqual({
-                protocol: "json",
-                version: 1,
-            });
-            await hubConnection.stop();
+            try {
+                await hubConnection.start();
+                expect(connection.sentData.length).toBe(1);
+                expect(JSON.parse(connection.sentData[0])).toEqual({
+                    protocol: "json",
+                    version: 1,
+                });
+            } finally {
+                await hubConnection.stop();
+            }
         });
     });
 
@@ -38,22 +41,24 @@ describe("HubConnection", () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const invokePromise = hubConnection.send("testMethod", "arg", 42)
-                .catch((_) => { }); // Suppress exception and unhandled promise rejection warning.
+            try {
+                const invokePromise = hubConnection.send("testMethod", "arg", 42)
+                    .catch((_) => { }); // Suppress exception and unhandled promise rejection warning.
 
-            // Verify the message is sent
-            expect(connection.sentData.length).toBe(1);
-            expect(JSON.parse(connection.sentData[0])).toEqual({
-                arguments: [
-                    "arg",
-                    42,
-                ],
-                target: "testMethod",
-                type: MessageType.Invocation,
-            });
-
-            // Close the connection
-            hubConnection.stop();
+                // Verify the message is sent
+                expect(connection.sentData.length).toBe(1);
+                expect(JSON.parse(connection.sentData[0])).toEqual({
+                    arguments: [
+                        "arg",
+                        42,
+                    ],
+                    target: "testMethod",
+                    type: MessageType.Invocation,
+                });
+            } finally {
+                // Close the connection
+                hubConnection.stop();
+            }
         });
     });
 
@@ -62,23 +67,26 @@ describe("HubConnection", () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const invokePromise = hubConnection.invoke("testMethod", "arg", 42)
-                .catch((_) => { }); // Suppress exception and unhandled promise rejection warning.
+            try {
+                const invokePromise = hubConnection.invoke("testMethod", "arg", 42)
+                    .catch((_) => { }); // Suppress exception and unhandled promise rejection warning.
 
-            // Verify the message is sent
-            expect(connection.sentData.length).toBe(1);
-            expect(JSON.parse(connection.sentData[0])).toEqual({
-                arguments: [
-                    "arg",
-                    42,
-                ],
-                invocationId: connection.lastInvocationId,
-                target: "testMethod",
-                type: MessageType.Invocation,
-            });
+                // Verify the message is sent
+                expect(connection.sentData.length).toBe(1);
+                expect(JSON.parse(connection.sentData[0])).toEqual({
+                    arguments: [
+                        "arg",
+                        42,
+                    ],
+                    invocationId: connection.lastInvocationId,
+                    target: "testMethod",
+                    type: MessageType.Invocation,
+                });
 
-            // Close the connection
-            hubConnection.stop();
+            } finally {
+                // Close the connection
+                hubConnection.stop();
+            }
         });
 
         it("can process handshake from text", async () => {
@@ -91,13 +99,16 @@ describe("HubConnection", () => {
 
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, null, mockProtocol);
+            try {
+                const data = "{}" + TextMessageFormat.RecordSeparator;
 
-            const data = "{}" + TextMessageFormat.RecordSeparator;
+                connection.receiveText(data);
 
-            connection.receiveText(data);
-
-            // message only contained handshake response
-            expect(protocolCalled).toEqual(false);
+                // message only contained handshake response
+                expect(protocolCalled).toEqual(false);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can process handshake from binary", async () => {
@@ -110,14 +121,17 @@ describe("HubConnection", () => {
 
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, null, mockProtocol);
+            try {
+                // handshake response + message separator
+                const data = [0x7b, 0x7d, 0x1e];
 
-            // handshake response + message separator
-            const data = [0x7b, 0x7d, 0x1e];
+                connection.receiveBinary(new Uint8Array(data).buffer);
 
-            connection.receiveBinary(new Uint8Array(data).buffer);
-
-            // message only contained handshake response
-            expect(protocolCalled).toEqual(false);
+                // message only contained handshake response
+                expect(protocolCalled).toEqual(false);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can process handshake and additional messages from binary", async () => {
@@ -128,21 +142,24 @@ describe("HubConnection", () => {
 
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, null, mockProtocol);
+            try {
+                // handshake response + message separator + message pack message
+                const data = [
+                    0x7b, 0x7d, 0x1e, 0x65, 0x95, 0x03, 0x80, 0xa1, 0x30, 0x01, 0xd9, 0x5d, 0x54, 0x68, 0x65, 0x20, 0x63, 0x6c,
+                    0x69, 0x65, 0x6e, 0x74, 0x20, 0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x65, 0x64, 0x20, 0x74, 0x6f, 0x20,
+                    0x69, 0x6e, 0x76, 0x6f, 0x6b, 0x65, 0x20, 0x74, 0x68, 0x65, 0x20, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69,
+                    0x6e, 0x67, 0x20, 0x27, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x27, 0x20, 0x6d,
+                    0x65, 0x74, 0x68, 0x6f, 0x64, 0x20, 0x69, 0x6e, 0x20, 0x61, 0x20, 0x6e, 0x6f, 0x6e, 0x2d, 0x73, 0x74, 0x72,
+                    0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x20, 0x66, 0x61, 0x73, 0x68, 0x69, 0x6f, 0x6e, 0x2e,
+                ];
 
-            // handshake response + message separator + message pack message
-            const data = [
-                0x7b, 0x7d, 0x1e, 0x65, 0x95, 0x03, 0x80, 0xa1, 0x30, 0x01, 0xd9, 0x5d, 0x54, 0x68, 0x65, 0x20, 0x63, 0x6c,
-                0x69, 0x65, 0x6e, 0x74, 0x20, 0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x65, 0x64, 0x20, 0x74, 0x6f, 0x20,
-                0x69, 0x6e, 0x76, 0x6f, 0x6b, 0x65, 0x20, 0x74, 0x68, 0x65, 0x20, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69,
-                0x6e, 0x67, 0x20, 0x27, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x27, 0x20, 0x6d,
-                0x65, 0x74, 0x68, 0x6f, 0x64, 0x20, 0x69, 0x6e, 0x20, 0x61, 0x20, 0x6e, 0x6f, 0x6e, 0x2d, 0x73, 0x74, 0x72,
-                0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x20, 0x66, 0x61, 0x73, 0x68, 0x69, 0x6f, 0x6e, 0x2e,
-            ];
+                connection.receiveBinary(new Uint8Array(data).buffer);
 
-            connection.receiveBinary(new Uint8Array(data).buffer);
-
-            // left over data is the message pack message
-            expect(receivedProcotolData.byteLength).toEqual(102);
+                // left over data is the message pack message
+                expect(receivedProcotolData.byteLength).toEqual(102);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can process handshake and additional messages from text", async () => {
@@ -153,36 +170,47 @@ describe("HubConnection", () => {
 
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, null, mockProtocol);
+            try {
+                const data = "{}" + TextMessageFormat.RecordSeparator + "{\"type\":6}" + TextMessageFormat.RecordSeparator;
 
-            const data = "{}" + TextMessageFormat.RecordSeparator + "{\"type\":6}" + TextMessageFormat.RecordSeparator;
+                connection.receiveText(data);
 
-            connection.receiveText(data);
-
-            expect(receivedProcotolData).toEqual("{\"type\":6}" + TextMessageFormat.RecordSeparator);
+                expect(receivedProcotolData).toEqual("{\"type\":6}" + TextMessageFormat.RecordSeparator);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("rejects the promise when an error is received", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            connection.receiveHandshakeResponse();
+            try {
+                connection.receiveHandshakeResponse();
 
-            const invokePromise = hubConnection.invoke("testMethod", "arg", 42);
+                const invokePromise = hubConnection.invoke("testMethod", "arg", 42);
 
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, error: "foo" });
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, error: "foo" });
 
-            await expect(invokePromise).rejects.toThrow("foo");
+                await expect(invokePromise).rejects.toThrow("foo");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("resolves the promise when a result is received", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            connection.receiveHandshakeResponse();
+            try {
+                connection.receiveHandshakeResponse();
 
-            const invokePromise = hubConnection.invoke("testMethod", "arg", 42);
+                const invokePromise = hubConnection.invoke("testMethod", "arg", 42);
 
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, result: "foo" });
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, result: "foo" });
 
-            expect(await invokePromise).toBe("foo");
+                expect(await invokePromise).toBe("foo");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("completes pending invocations when stopped", async () => {
@@ -202,14 +230,17 @@ describe("HubConnection", () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                const invokePromise = hubConnection.invoke("testMethod");
+                // Typically this would be called by the transport
+                connection.onclose(new Error("Connection lost"));
 
-            const invokePromise = hubConnection.invoke("testMethod");
-            // Typically this would be called by the transport
-            connection.onclose(new Error("Connection lost"));
-
-            expect(invokePromise).rejects.toThrow("Connection lost");
+                expect(invokePromise).rejects.toThrow("Connection lost");
+            } finally {
+                hubConnection.stop();
+            }
         });
     });
 
@@ -225,17 +256,20 @@ describe("HubConnection", () => {
             } as ILogger;
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, logger);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                connection.receive({
+                    arguments: ["test"],
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: ["test"],
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
-
-            expect(warnings).toEqual(["No client method with the name 'message' found."]);
+                expect(warnings).toEqual(["No client method with the name 'message' found."]);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("invocations ignored in callbacks that have registered then unregistered", async () => {
@@ -249,248 +283,281 @@ describe("HubConnection", () => {
             } as ILogger;
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, logger);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                const handler = () => { };
+                hubConnection.on("message", handler);
+                hubConnection.off("message", handler);
 
-            const handler = () => { };
-            hubConnection.on("message", handler);
-            hubConnection.off("message", handler);
+                connection.receive({
+                    arguments: ["test"],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: ["test"],
-                invocationId: "0",
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
-
-            expect(warnings).toEqual(["No client method with the name 'message' found."]);
+                expect(warnings).toEqual(["No client method with the name 'message' found."]);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("all handlers can be unregistered with just the method name", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                let count = 0;
+                const handler = () => { count++; };
+                const secondHandler = () => { count++; };
+                hubConnection.on("inc", handler);
+                hubConnection.on("inc", secondHandler);
 
-            let count = 0;
-            const handler = () => { count++; };
-            const secondHandler = () => { count++; };
-            hubConnection.on("inc", handler);
-            hubConnection.on("inc", secondHandler);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "inc",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "inc",
-                type: MessageType.Invocation,
-            });
+                hubConnection.off("inc");
 
-            hubConnection.off("inc");
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "inc",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "inc",
-                type: MessageType.Invocation,
-            });
-
-            expect(count).toBe(2);
+                expect(count).toBe(2);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("a single handler can be unregistered with the method name and handler", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                let count = 0;
+                const handler = () => { count++; };
+                const secondHandler = () => { count++; };
+                hubConnection.on("inc", handler);
+                hubConnection.on("inc", secondHandler);
 
-            let count = 0;
-            const handler = () => { count++; };
-            const secondHandler = () => { count++; };
-            hubConnection.on("inc", handler);
-            hubConnection.on("inc", secondHandler);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "inc",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "inc",
-                type: MessageType.Invocation,
-            });
+                hubConnection.off("inc", handler);
 
-            hubConnection.off("inc", handler);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "inc",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "inc",
-                type: MessageType.Invocation,
-            });
-
-            expect(count).toBe(3);
+                expect(count).toBe(3);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can't register the same handler multiple times", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                let count = 0;
+                const handler = () => { count++; };
+                hubConnection.on("inc", handler);
+                hubConnection.on("inc", handler);
 
-            let count = 0;
-            const handler = () => { count++; };
-            hubConnection.on("inc", handler);
-            hubConnection.on("inc", handler);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "inc",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "inc",
-                type: MessageType.Invocation,
-            });
-
-            expect(count).toBe(1);
+                expect(count).toBe(1);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("callback invoked when servers invokes a method on the client", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                let value = "";
+                hubConnection.on("message", (v) => value = v);
 
-            let value = "";
-            hubConnection.on("message", (v) => value = v);
+                connection.receive({
+                    arguments: ["test"],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: ["test"],
-                invocationId: "0",
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
-
-            expect(value).toBe("test");
+                expect(value).toBe("test");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("stop on handshake error", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                let closeError: Error = null;
+                hubConnection.onclose((e) => closeError = e);
 
-            let closeError: Error = null;
-            hubConnection.onclose((e) => closeError = e);
+                connection.receiveHandshakeResponse("Error!");
 
-            connection.receiveHandshakeResponse("Error!");
-
-            expect(closeError.message).toEqual("Server returned handshake error: Error!");
+                expect(closeError.message).toEqual("Server returned handshake error: Error!");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("stop on close message", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                let isClosed = false;
+                let closeError: Error = null;
+                hubConnection.onclose((e) => {
+                    isClosed = true;
+                    closeError = e;
+                });
 
-            let isClosed = false;
-            let closeError: Error = null;
-            hubConnection.onclose((e) => {
-                isClosed = true;
-                closeError = e;
-            });
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                connection.receive({
+                    type: MessageType.Close,
+                });
 
-            connection.receive({
-                type: MessageType.Close,
-            });
-
-            expect(isClosed).toEqual(true);
-            expect(closeError).toEqual(null);
+                expect(isClosed).toEqual(true);
+                expect(closeError).toEqual(null);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("stop on error close message", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                let isClosed = false;
+                let closeError: Error = null;
+                hubConnection.onclose((e) => {
+                    isClosed = true;
+                    closeError = e;
+                });
 
-            let isClosed = false;
-            let closeError: Error = null;
-            hubConnection.onclose((e) => {
-                isClosed = true;
-                closeError = e;
-            });
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                connection.receive({
+                    error: "Error!",
+                    type: MessageType.Close,
+                });
 
-            connection.receive({
-                error: "Error!",
-                type: MessageType.Close,
-            });
-
-            expect(isClosed).toEqual(true);
-            expect(closeError.message).toEqual("Server returned an error on close: Error!");
+                expect(isClosed).toEqual(true);
+                expect(closeError.message).toEqual("Server returned an error on close: Error!");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can have multiple callbacks", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                let numInvocations1 = 0;
+                let numInvocations2 = 0;
+                hubConnection.on("message", () => numInvocations1++);
+                hubConnection.on("message", () => numInvocations2++);
 
-            let numInvocations1 = 0;
-            let numInvocations2 = 0;
-            hubConnection.on("message", () => numInvocations1++);
-            hubConnection.on("message", () => numInvocations2++);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
-
-            expect(numInvocations1).toBe(1);
-            expect(numInvocations2).toBe(1);
+                expect(numInvocations1).toBe(1);
+                expect(numInvocations2).toBe(1);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can unsubscribe from on", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                let numInvocations = 0;
+                const callback = () => numInvocations++;
+                hubConnection.on("message", callback);
 
-            let numInvocations = 0;
-            const callback = () => numInvocations++;
-            hubConnection.on("message", callback);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
+                hubConnection.off("message", callback);
 
-            hubConnection.off("message", callback);
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
-
-            expect(numInvocations).toBe(1);
+                expect(numInvocations).toBe(1);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("unsubscribing from non-existing callbacks no-ops", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-
-            hubConnection.off("_", () => { });
-            hubConnection.on("message", (t) => { });
-            hubConnection.on("message", () => { });
+            try {
+                hubConnection.off("_", () => { });
+                hubConnection.on("message", (t) => { });
+                hubConnection.on("message", () => { });
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("using null/undefined for methodName or method no-ops", async () => {
@@ -506,33 +573,36 @@ describe("HubConnection", () => {
 
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection, logger);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                hubConnection.on(null, undefined);
+                hubConnection.on(undefined, null);
+                hubConnection.on("message", null);
+                hubConnection.on("message", undefined);
+                hubConnection.on(null, () => { });
+                hubConnection.on(undefined, () => { });
 
-            hubConnection.on(null, undefined);
-            hubConnection.on(undefined, null);
-            hubConnection.on("message", null);
-            hubConnection.on("message", undefined);
-            hubConnection.on(null, () => { });
-            hubConnection.on(undefined, () => { });
+                // invoke a method to make sure we are not trying to use null/undefined
+                connection.receive({
+                    arguments: [],
+                    invocationId: "0",
+                    nonblocking: true,
+                    target: "message",
+                    type: MessageType.Invocation,
+                });
 
-            // invoke a method to make sure we are not trying to use null/undefined
-            connection.receive({
-                arguments: [],
-                invocationId: "0",
-                nonblocking: true,
-                target: "message",
-                type: MessageType.Invocation,
-            });
+                expect(warnings).toEqual(["No client method with the name 'message' found."]);
 
-            expect(warnings).toEqual(["No client method with the name 'message' found."]);
-
-            hubConnection.off(null, undefined);
-            hubConnection.off(undefined, null);
-            hubConnection.off("message", null);
-            hubConnection.off("message", undefined);
-            hubConnection.off(null, () => { });
-            hubConnection.off(undefined, () => { });
+                hubConnection.off(null, undefined);
+                hubConnection.off(undefined, null);
+                hubConnection.off("message", null);
+                hubConnection.off("message", undefined);
+                hubConnection.off(null, () => { });
+                hubConnection.off(undefined, () => { });
+            } finally {
+                hubConnection.stop();
+            }
         });
     });
 
@@ -541,150 +611,182 @@ describe("HubConnection", () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const invokePromise = hubConnection.stream("testStream", "arg", 42);
+            try {
+                const invokePromise = hubConnection.stream("testStream", "arg", 42);
 
-            // Verify the message is sent
-            expect(connection.sentData.length).toBe(1);
-            expect(JSON.parse(connection.sentData[0])).toEqual({
-                arguments: [
-                    "arg",
-                    42,
-                ],
-                invocationId: connection.lastInvocationId,
-                target: "testStream",
-                type: MessageType.StreamInvocation,
-            });
+                // Verify the message is sent
+                expect(connection.sentData.length).toBe(1);
+                expect(JSON.parse(connection.sentData[0])).toEqual({
+                    arguments: [
+                        "arg",
+                        42,
+                    ],
+                    invocationId: connection.lastInvocationId,
+                    target: "testStream",
+                    type: MessageType.StreamInvocation,
+                });
 
-            // Close the connection
-            hubConnection.stop();
+                // Close the connection
+                hubConnection.stop();
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("completes with an error when an error is yielded", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                const observer = new TestObserver();
+                hubConnection.stream<any>("testMethod", "arg", 42)
+                    .subscribe(observer);
 
-            const observer = new TestObserver();
-            hubConnection.stream<any>("testMethod", "arg", 42)
-                .subscribe(observer);
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, error: "foo" });
 
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, error: "foo" });
-
-            expect(observer.completed).rejects.toThrow("Error: foo");
+                expect(observer.completed).rejects.toThrow("Error: foo");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("completes the observer when a completion is received", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                const observer = new TestObserver();
+                hubConnection.stream<any>("testMethod", "arg", 42)
+                    .subscribe(observer);
 
-            const observer = new TestObserver();
-            hubConnection.stream<any>("testMethod", "arg", 42)
-                .subscribe(observer);
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId });
 
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId });
-
-            expect(await observer.completed).toEqual([]);
+                expect(await observer.completed).toEqual([]);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("completes pending streams when stopped", async () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const observer = new TestObserver();
-            hubConnection.stream<any>("testMethod")
-                .subscribe(observer);
-            hubConnection.stop();
+            try {
+                const observer = new TestObserver();
+                hubConnection.stream<any>("testMethod")
+                    .subscribe(observer);
+                hubConnection.stop();
 
-            expect(observer.completed).rejects.toThrow("Error: Invocation canceled due to connection being closed.");
+                expect(observer.completed).rejects.toThrow("Error: Invocation canceled due to connection being closed.");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("completes pending streams when connection is lost", async () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const observer = new TestObserver();
-            hubConnection.stream<any>("testMethod")
-                .subscribe(observer);
+            try {
+                const observer = new TestObserver();
+                hubConnection.stream<any>("testMethod")
+                    .subscribe(observer);
 
-            // Typically this would be called by the transport
-            connection.onclose(new Error("Connection lost"));
+                // Typically this would be called by the transport
+                connection.onclose(new Error("Connection lost"));
 
-            expect(observer.completed).rejects.toThrow("Error: Connection lost");
+                expect(observer.completed).rejects.toThrow("Error: Connection lost");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("yields items as they arrive", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                const observer = new TestObserver();
+                hubConnection.stream<any>("testMethod")
+                    .subscribe(observer);
 
-            const observer = new TestObserver();
-            hubConnection.stream<any>("testMethod")
-                .subscribe(observer);
+                connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 1 });
+                expect(observer.itemsReceived).toEqual([1]);
 
-            connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 1 });
-            expect(observer.itemsReceived).toEqual([1]);
+                connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 2 });
+                expect(observer.itemsReceived).toEqual([1, 2]);
 
-            connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 2 });
-            expect(observer.itemsReceived).toEqual([1, 2]);
+                connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 3 });
+                expect(observer.itemsReceived).toEqual([1, 2, 3]);
 
-            connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 3 });
-            expect(observer.itemsReceived).toEqual([1, 2, 3]);
-
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId });
-            expect(await observer.completed).toEqual([1, 2, 3]);
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId });
+                expect(await observer.completed).toEqual([1, 2, 3]);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("does not require error function registered", async () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const observer = hubConnection.stream("testMethod").subscribe(NullSubscriber.instance);
+            try {
+                const observer = hubConnection.stream("testMethod").subscribe(NullSubscriber.instance);
 
-            // Typically this would be called by the transport
-            // triggers observer.error()
-            connection.onclose(new Error("Connection lost"));
+                // Typically this would be called by the transport
+                // triggers observer.error()
+                connection.onclose(new Error("Connection lost"));
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("does not require complete function registered", async () => {
             const connection = new TestConnection();
 
             const hubConnection = createHubConnection(connection);
-            const observer = hubConnection.stream("testMethod").subscribe(NullSubscriber.instance);
+            try {
+                const observer = hubConnection.stream("testMethod").subscribe(NullSubscriber.instance);
 
-            // Send completion to trigger observer.complete()
-            // Expectation is connection.receive will not to throw
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId });
+                // Send completion to trigger observer.complete()
+                // Expectation is connection.receive will not to throw
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId });
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("can be canceled", () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
+            try {
+                connection.receiveHandshakeResponse();
 
-            connection.receiveHandshakeResponse();
+                const observer = new TestObserver();
+                const subscription = hubConnection.stream("testMethod")
+                    .subscribe(observer);
 
-            const observer = new TestObserver();
-            const subscription = hubConnection.stream("testMethod")
-                .subscribe(observer);
+                connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 1 });
+                expect(observer.itemsReceived).toEqual([1]);
 
-            connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 1 });
-            expect(observer.itemsReceived).toEqual([1]);
+                subscription.dispose();
 
-            subscription.dispose();
+                connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 2 });
+                // Observer should no longer receive messages
+                expect(observer.itemsReceived).toEqual([1]);
 
-            connection.receive({ type: MessageType.StreamItem, invocationId: connection.lastInvocationId, item: 2 });
-            // Observer should no longer receive messages
-            expect(observer.itemsReceived).toEqual([1]);
-
-            // Verify the cancel is sent
-            expect(connection.sentData.length).toBe(2);
-            expect(JSON.parse(connection.sentData[1])).toEqual({
-                invocationId: connection.lastInvocationId,
-                type: MessageType.CancelInvocation,
-            });
+                // Verify the cancel is sent
+                expect(connection.sentData.length).toBe(2);
+                expect(JSON.parse(connection.sentData[1])).toEqual({
+                    invocationId: connection.lastInvocationId,
+                    type: MessageType.CancelInvocation,
+                });
+            } finally {
+                hubConnection.stop();
+            }
         });
     });
 
@@ -692,33 +794,45 @@ describe("HubConnection", () => {
         it("can have multiple callbacks", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            let invocations = 0;
-            hubConnection.onclose((e) => invocations++);
-            hubConnection.onclose((e) => invocations++);
-            // Typically this would be called by the transport
-            connection.onclose();
-            expect(invocations).toBe(2);
+            try {
+                let invocations = 0;
+                hubConnection.onclose((e) => invocations++);
+                hubConnection.onclose((e) => invocations++);
+                // Typically this would be called by the transport
+                connection.onclose();
+                expect(invocations).toBe(2);
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("callbacks receive error", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            let error: Error;
-            hubConnection.onclose((e) => error = e);
+            try {
+                let error: Error;
+                hubConnection.onclose((e) => error = e);
 
-            // Typically this would be called by the transport
-            connection.onclose(new Error("Test error."));
-            expect(error.message).toBe("Test error.");
+                // Typically this would be called by the transport
+                connection.onclose(new Error("Test error."));
+                expect(error.message).toBe("Test error.");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("ignores null callbacks", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            hubConnection.onclose(null);
-            hubConnection.onclose(undefined);
-            // Typically this would be called by the transport
-            connection.onclose();
-            // expect no errors
+            try {
+                hubConnection.onclose(null);
+                hubConnection.onclose(undefined);
+                // Typically this would be called by the transport
+                connection.onclose();
+                // expect no errors
+            } finally {
+                hubConnection.stop();
+            }
         });
     });
 
@@ -728,81 +842,97 @@ describe("HubConnection", () => {
 
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            const invokePromise = hubConnection.invoke("testMethod", "arg", 42);
+            try {
+                const invokePromise = hubConnection.invoke("testMethod", "arg", 42);
 
-            connection.receive({ type: MessageType.Ping });
-            connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, result: "foo" });
+                connection.receive({ type: MessageType.Ping });
+                connection.receive({ type: MessageType.Completion, invocationId: connection.lastInvocationId, result: "foo" });
 
-            expect(await invokePromise).toBe("foo");
+                expect(await invokePromise).toBe("foo");
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("does not terminate if messages are received", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            hubConnection.serverTimeoutInMilliseconds = 100;
+            try {
+                hubConnection.serverTimeoutInMilliseconds = 100;
 
-            const p = new PromiseSource<Error>();
-            hubConnection.onclose((e) => p.resolve(e));
+                const p = new PromiseSource<Error>();
+                hubConnection.onclose((e) => p.resolve(e));
 
-            await hubConnection.start();
+                await hubConnection.start();
 
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
 
-            connection.stop();
+                connection.stop();
 
-            const error = await p.promise;
+                const error = await p.promise;
 
-            expect(error).toBeUndefined();
+                expect(error).toBeUndefined();
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("does not timeout if message was received before HubConnection.start", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            hubConnection.serverTimeoutInMilliseconds = 100;
+            try {
+                hubConnection.serverTimeoutInMilliseconds = 100;
 
-            const p = new PromiseSource<Error>();
-            hubConnection.onclose((e) => p.resolve(e));
+                const p = new PromiseSource<Error>();
+                hubConnection.onclose((e) => p.resolve(e));
 
-            // send message before start to trigger timeout handler
-            // testing for regression where we didn't cleanup timer if request received before start created a timer
-            await connection.receive({ type: MessageType.Ping });
+                // send message before start to trigger timeout handler
+                // testing for regression where we didn't cleanup timer if request received before start created a timer
+                await connection.receive({ type: MessageType.Ping });
 
-            await hubConnection.start();
+                await hubConnection.start();
 
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
-            await connection.receive({ type: MessageType.Ping });
-            await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
+                await connection.receive({ type: MessageType.Ping });
+                await delay(50);
 
-            connection.stop();
+                connection.stop();
 
-            const error = await p.promise;
+                const error = await p.promise;
 
-            expect(error).toBeUndefined();
+                expect(error).toBeUndefined();
+            } finally {
+                hubConnection.stop();
+            }
         });
 
         it("terminates if no messages received within timeout interval", async () => {
             const connection = new TestConnection();
             const hubConnection = createHubConnection(connection);
-            hubConnection.serverTimeoutInMilliseconds = 100;
+            try {
+                hubConnection.serverTimeoutInMilliseconds = 100;
 
-            const p = new PromiseSource<Error>();
-            hubConnection.onclose((e) => p.resolve(e));
+                const p = new PromiseSource<Error>();
+                hubConnection.onclose((e) => p.resolve(e));
 
-            await hubConnection.start();
+                await hubConnection.start();
 
-            const error = await p.promise;
+                const error = await p.promise;
 
-            expect(error).toEqual(new Error("Server timeout elapsed without receiving a message from the server."));
+                expect(error).toEqual(new Error("Server timeout elapsed without receiving a message from the server."));
+            } finally {
+                hubConnection.stop();
+            }
         });
     });
 });
