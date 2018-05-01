@@ -4,9 +4,9 @@
 // This will be treated as a bit flag in the future, so we keep it using power-of-two values.
 export enum HttpTransportType {
     None = 0,
-    WebSockets = 1,
-    ServerSentEvents = 2,
-    LongPolling = 4,
+    WebSockets = 1 << 0,
+    ServerSentEvents = 1 << 1,
+    LongPolling = 1 << 2,
 }
 
 export enum TransferFormat {
