@@ -5,7 +5,7 @@ export enum HttpTransportType {
     None = 0,
     WebSockets = 1,
     ServerSentEvents = 2,
-    LongPolling = 3,
+    LongPolling = 4,
 }
 
 export enum TransferFormat {
